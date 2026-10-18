@@ -1,0 +1,56 @@
+
+name: win 11
+
+on:
+  workflow_dispatch:
+
+jobs:
+  secure-rdp:
+    runs-on: [self-hosted, Windows, X64, 4gb]
+    timeout-minutes: 350
+
+    steps:
+      - name: Check Windows RAM
+        shell: pwsh
+        run: |
+          $os = Get-CimInstance Win32_OperatingSystem
+          $ramGB = [math]::Round(
+            $os.TotalVisibleMemorySize / 1MB, 2
+          )
+
+          Write-Host "Windows RAM: $ramGB GB"
+
+          if ($ramGB -gt 5) {
+            Write-Host "Warning: RAM is above the expected 4 GB target."
+          }
+
+      - name: Verify Windows Version
+        shell: pwsh
+        run: |
+          Get-CimInstance Win32_OperatingSystem |
+            Select-Object Caption, Version,
+              OSArchitecture |
+            Format-List
+
+      - name: Check RDP Service
+        shell: pwsh
+        run: |
+          $service = Get-Service -Name TermService `
+            -ErrorAction SilentlyContinue
+
+          if ($service) {
+            Write-Host "RDP service status: $($service.Status)"
+          }
+          else {
+            Write-Host "RDP service is unavailable."
+          }
+
+      - name: Keep Runner Active
+        shell: pwsh
+        run: |
+          Write-Host "Self-hosted Windows runner is active."
+          Write-Host "Use the GitHub Actions cancellation control to stop the job."
+          while ($true) {
+            Write-Host "[$(Get-Date)] Runner is active."
+            Start-Sleep -Seconds 300
+          }
